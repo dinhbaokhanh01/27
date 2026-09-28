@@ -1,0 +1,158 @@
+1. Cấu trúc thư mục dự án (Maven Webapp)
+Plaintext
+jsp-servlet-currency-converter/
+├── pom.xml                                     # File cấu hình quản lý thư viện Maven
+└── src/
+    └── main/
+        ├── java/                               # Nơi chứa mã nguồn Java Servlets
+        │   └── com/
+        │       └── codegym/
+        │           └── ConverterServlet.java   # Xử lý logic tính toán chuyển đổi tiền tệ
+        └── webapp/                             # Nơi chứa trang giao diện HTML/JSP
+            ├── index.jsp                       # Trang chủ chứa Form nhập tỉ giá và USD
+            └── WEB-INF/
+                └── web.xml                     # File cấu hình ứng dụng Web
+2. Mã nguồn chi tiết các file
+File 1: pom.xml (Cấu hình Maven - Chuẩn Jakarta EE cho Tomcat 10+)
+XML
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.codegym</groupId>
+    <artifactId>jsp-servlet-currency-converter</artifactId>
+    <packaging>war</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>Currency Converter Maven Webapp</name>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Jakarta Servlet API tương thích Tomcat 10+ -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Jakarta JSP API -->
+        <dependency>
+            <groupId>jakarta.servlet.jsp</groupId>
+            <artifactId>jakarta.servlet.jsp-api</artifactId>
+            <version>3.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>jsp-servlet-currency-converter</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+File 2: index.jsp (Giao diện Form nhập dữ liệu)
+Đường dẫn tệp: src/main/webapp/index.jsp
+
+Java
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Currency Converter</title>
+        <style>
+            body { font-family: 'Arial', sans-serif; display: flex; justify-content: center; margin-top: 100px; background-color: #f8fafc; }
+            .converter-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+            input { padding: 10px; margin: 10px 0; width: 90%; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+            button { background-color: #1b2a7a; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; width: 90%; font-weight: bold; margin-top: 15px;}
+            button:hover { background-color: #121c54; }
+        </style>
+    </head>
+    <body>
+        <div class="converter-container">
+            <h2 style="color: #1b2a7a;">Chuyển đổi USD sang VNĐ</h2>
+            <!-- Form gửi dữ liệu bằng phương thức POST tới endpoint /convert -->
+            <form action="convert" method="POST">
+                <div style="text-align: left; margin-left: 5%;">
+                    <label style="font-weight: bold; color: #333;">Tỉ giá (VND/USD):</label>
+                </div>
+                <input type="number" name="rate" placeholder="Ví dụ: 25000" value="25000" required step="any"/>
+                
+                <div style="text-align: left; margin-left: 5%; margin-top: 10px;">
+                    <label style="font-weight: bold; color: #333;">Lượng USD cần đổi:</label>
+                </div>
+                <input type="number" name="usd" placeholder="Nhập số USD" required step="any"/>
+                
+                <button type="submit">Chuyển đổi</button>
+            </form>
+        </div>
+    </body>
+</html>
+File 3: ConverterServlet.java (Tầng xử lý tính toán)
+Đường dẫn tệp: src/main/java/com/codegym/ConverterServlet.java
+
+Java
+package com.codegym;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+// Định tuyến URL kích hoạt Servlet qua endpoint /convert
+@WebServlet(name = "ConverterServlet", urlPatterns = {"/convert"})
+public class ConverterServlet extends HttpServlet {
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        // Cấu hình mã hóa UTF-8 để hiển thị Tiếng Việt
+        response.setContentType("text/html;charset=UTF-8");
+        
+        try (PrintWriter out = response.getWriter()) {
+            try {
+                // 1. Nhận dữ liệu từ form và chuyển đổi thành kiểu số thực
+                float rate = Float.parseFloat(request.getParameter("rate"));
+                float usd = Float.parseFloat(request.getParameter("usd"));
+                
+                // 2. Thực hiện tính toán số tiền VNĐ
+                float vnd = rate * usd;
+                
+                // 3. Xuất kết quả ra giao diện HTML
+                out.println("<!DOCTYPE html>");
+                out.println("<html>");
+                out.println("<head><title>KẾT QUẢ CHUYỂN ĐỔI</title></head>");
+                out.println("<body style='font-family: Arial, sans-serif; text-align: center; margin-top: 100px;'>");
+                out.println("<h2 style='color: #1b2a7a;'>KẾT QUẢ CHUYỂN ĐỔI</h2>");
+                out.println("<p style='font-size: 18px;'>Tỉ giá: " + rate + " VND/USD</p>");
+                out.println("<p style='font-size: 18px;'>Số tiền USD: $" + usd + "</p>");
+                out.println("<h3 style='color: #27ae60; font-size: 24px;'>Thành tiền VNĐ: " + vnd + " VNĐ</h3>");
+                out.println("<br><a href='index.jsp' style='text-decoration: none; padding: 10px 20px; background-color: #1b2a7a; color: white; border-radius: 4px;'>Quay lại</a>");
+                out.println("</body>");
+                out.println("</html>");
+                
+            } catch (NumberFormatException e) {
+                // Xử lý ngoại lệ trường hợp định dạng số không hợp lệ
+                out.println("<!DOCTYPE html>");
+                out.println("<html><body>");
+                out.println("<h2 style='color: red; text-align: center; margin-top: 100px;'>Lỗi: Vui lòng nhập số hợp lệ!</h2>");
+                out.println("<div style='text-align: center;'><a href='index.jsp'>Quay lại</a></div>");
+                out.println("</body></html>");
+            }
+        }
+    }
+}
